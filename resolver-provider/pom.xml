@@ -21,13 +21,33 @@
         <dependency>
             <groupId>de.scholzi100.incubator</groupId>
             <artifactId>resolver</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>0.1.0-SNAPSHOT</version>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>de.scholzi100.incubator</groupId>
+            <artifactId>maven-packed</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.maven</groupId>
+                    <artifactId>maven-resolver-provider</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-api</artifactId>
+            <version>1.7.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-util</artifactId>
             <version>1.7.0</version>
             <scope>provided</scope>
         </dependency>
@@ -73,7 +93,6 @@
             <version>1.7.0</version>
             <scope>compile</scope>
         </dependency>
-
 
     </dependencies>
 

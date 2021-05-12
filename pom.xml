@@ -12,6 +12,7 @@
         <module>resolver</module>
         <module>plugin</module>
         <module>resolver-provider</module>
+        <module>maven-packed</module>
     </modules>
 
     <build>

@@ -1,5 +1,7 @@
-package de.scholzi100.incubator.resolver.modulefinder;
+package de.scholzi100.incubator.resolver.modulefinder.test;
 
+import de.scholzi100.incubator.resolver.modulefinder.MavenModuleFinder;
+import de.scholzi100.incubator.resolver.modulefinder.RepoResolverOverlay;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
@@ -11,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.module.ModuleFinder;
-import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
@@ -32,19 +34,7 @@ public class TestMain {
     }
 
     private void test() throws ArtifactResolutionException {
-//        final var boot = ModuleLayer.boot();
-        final var boot = getClass().getModule().getLayer();
-        // currently project is need to be build
-        final var finder = ModuleFinder.of(Path.of("resolver-provider/target/resolver-provider-1.0-SNAPSHOT-test/"));
-        printModuleLayer(boot);
-        System.out.println("-----");
-
-        final var configuration = boot.configuration().resolve(finder, ModuleFinder.of(), Set.of("de.scholzi100.incubator.resolver.provider"));
-        final var moduleLayer = boot.defineModulesWithOneLoader(configuration, getClass().getClassLoader());
-
-        printModuleLayer(moduleLayer);
-
-        final RepoResolverOverlay resolverOverlay = RepoResolverOverlay.of(moduleLayer, "modulelayer:default");
+        final RepoResolverOverlay resolverOverlay = getRepoResolverOverlay(ModuleLayer.boot(), "modulelayer:default", ClassLoader.getSystemClassLoader());
 
         //Test to resolve jackson-core
 
@@ -65,7 +55,25 @@ public class TestMain {
         System.out.println( artifact + " resolved to  " + artifact.getFile() );
     }
 
-    private void printModuleLayer(ModuleLayer moduleLayer) {
+    public static RepoResolverOverlay getRepoResolverOverlay(ModuleLayer parentModuleLayer, String uri,  ClassLoader targetClassLoader) {
+        // currently project is need to be build
+        final var of = Path.of("resolver-provider/target/resolver-provider-0.1.0-SNAPSHOT-test");
+        if (Files.notExists(of)){
+            throw new IllegalStateException(of.toAbsolutePath().toString());
+        }
+        final var finder = ModuleFinder.of(of);
+        printModuleLayer(parentModuleLayer);
+        System.out.println("-----");
+
+        final var configuration = parentModuleLayer.configuration().resolve(finder, ModuleFinder.of(), Set.of("de.scholzi100.incubator.resolver.provider"));
+        final var moduleLayer = parentModuleLayer.defineModulesWithOneLoader(configuration, targetClassLoader);
+
+        printModuleLayer(moduleLayer);
+
+        return RepoResolverOverlay.of(moduleLayer, uri);
+    }
+
+    private static void printModuleLayer(ModuleLayer moduleLayer) {
         moduleLayer.modules().stream().sorted(Comparator.comparing(module -> module.getDescriptor().name())).forEach(module -> {
             System.out.println(module.getDescriptor().toNameAndVersion()+(module.getDescriptor().isAutomatic() ? " [automatic]" : ""));
         });

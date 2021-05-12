@@ -1,7 +1,7 @@
 package de.scholzi100.incubator.resolver.modulefinder;
 
 import de.scholzi100.incubator.resolver.modulefinder.provider.RepoResolver;
-import de.scholzi100.incubator.resolver.modulefinder.providers.*;
+import org.apache.maven.repository.internal.*;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.DefaultArtifactType;
@@ -41,6 +41,12 @@ public class RepoResolverImpl implements RepoResolver {
     private static URI SERVICE_URI;
     private static Logger LOGGER = LoggerFactory.getLogger(RepoResolverImpl.class);
 
+    public RepoResolverImpl() {
+        if (getClass().getModule().getLayer().equals(ModuleLayer.boot())) {
+            throw new UnsupportedOperationException("This module is not intend to be used with boot layer!");
+        }
+    }
+
     static {
         try {
             SERVICE_URI = new URI("modulelayer", "default", null);
@@ -52,6 +58,9 @@ public class RepoResolverImpl implements RepoResolver {
     public static DefaultServiceLocator newServiceLocator() {
         //TODO face out DefaultServiceLocator in favor of SISU or Guava
         DefaultServiceLocator locator = new DefaultServiceLocator();
+
+        //NOTICE some how some IDEs do not use the shaded jar but instead the classes
+        //So be not scared if those services are marked red.
         locator.addService(ArtifactDescriptorReader.class, DefaultArtifactDescriptorReader.class);
         locator.addService(VersionResolver.class, DefaultVersionResolver.class);
         locator.addService(VersionRangeResolver.class, DefaultVersionRangeResolver.class);

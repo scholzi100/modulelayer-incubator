@@ -9,12 +9,23 @@ import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
+import org.eclipse.aether.util.artifact.SubArtifact;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.module.ModuleFinder;
+import java.lang.reflect.InvocationTargetException;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -26,11 +37,11 @@ public class TestMain {
 
     public static void main(String[] args) throws ArtifactResolutionException {
         final var testMain = new TestMain();
-//        testMain.start();
+        testMain.start();
         /**
          * Create
          */
-        testMain.test();
+//        testMain.test();
     }
 
     private void test() throws ArtifactResolutionException {
@@ -40,19 +51,56 @@ public class TestMain {
 
         RepositorySystem system = resolverOverlay.newRepositorySystem();
 
-        RepositorySystemSession session = resolverOverlay.newRepositorySystemSession( system );
+        RepositorySystemSession session = resolverOverlay.newRepositorySystemSession(system);
 
-        Artifact artifact = new DefaultArtifact( "com.fasterxml.jackson.core:jackson-core:2.12.3" );
+        Artifact artifact = new DefaultArtifact("com.fasterxml.jackson.core:jackson-core:2.12.3");
+        Artifact shaArtifact = new SubArtifact(artifact, "", "jar.sha1");
+        Artifact pomArtifact = new SubArtifact(artifact, "", "pom.sha1");
 
         ArtifactRequest artifactRequest = new ArtifactRequest();
-        artifactRequest.setArtifact( artifact );
-        artifactRequest.setRepositories( RepoResolverOverlay.newRepositories( system, session ) );
+        artifactRequest.setArtifact(artifact);
+        artifactRequest.setRepositories(RepoResolverOverlay.newRepositories(system, session));
 
-        ArtifactResult artifactResult = system.resolveArtifact( session, artifactRequest );
+        ArtifactRequest pomSha1Request = new ArtifactRequest();
+        pomSha1Request.setArtifact(pomArtifact);
+        pomSha1Request.setRepositories(RepoResolverOverlay.newRepositories(system, session));
 
-        artifact = artifactResult.getArtifact();
+        ArtifactRequest jarSha1Request = new ArtifactRequest();
+        jarSha1Request.setArtifact(shaArtifact);
+        jarSha1Request.setRepositories(RepoResolverOverlay.newRepositories(system, session));
 
-        System.out.println( artifact + " resolved to  " + artifact.getFile() );
+        final var artifactResults = system.resolveArtifacts(session, List.of(artifactRequest, pomSha1Request, jarSha1Request));
+        artifactResults.stream().map(ArtifactResult::getArtifact).forEach(resultArtifact -> {
+
+            if (resultArtifact.getExtension().equals("jar")) {
+                final MessageDigest digest;
+                try {
+                    digest = MessageDigest.getInstance("SHA-1");
+                } catch (NoSuchAlgorithmException e) {
+                    throw new IllegalArgumentException(e);
+                }
+                final var path = resultArtifact.getFile().toPath();
+
+                try (final var bufferedReader = Files.newByteChannel(path, StandardOpenOption.READ)) {
+                    var bf = ByteBuffer.allocate(1024);
+                    while (bufferedReader.read(bf) > 0) {
+                        bf.flip();
+                        digest.update(bf);
+                        bf.clear();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                System.out.printf("%s resolved with SHA1 checksum %040x to %s%n", resultArtifact, new BigInteger(1, digest.digest()), resultArtifact.getFile());
+            } else {
+                try {
+                    System.out.printf("%s resolved with SHA1 checksum %s to %s%n", resultArtifact, Files.readString(resultArtifact.getFile().toPath()), resultArtifact.getFile());
+                } catch (IOException e) {
+                    System.out.println("Failed to read " + artifact.getFile().toPath().toAbsolutePath());
+                }
+            }
+        });
+
     }
 
     public static RepoResolverOverlay getRepoResolverOverlay(ModuleLayer parentModuleLayer, String uri,  ClassLoader targetClassLoader) {
@@ -62,13 +110,13 @@ public class TestMain {
             throw new IllegalStateException(of.toAbsolutePath().toString());
         }
         final var finder = ModuleFinder.of(of);
-        printModuleLayer(parentModuleLayer);
-        System.out.println("-----");
+        //printModuleLayer(parentModuleLayer);
+        //System.out.println("-----");
 
         final var configuration = parentModuleLayer.configuration().resolve(finder, ModuleFinder.of(), Set.of("de.scholzi100.incubator.resolver.provider"));
         final var moduleLayer = parentModuleLayer.defineModulesWithOneLoader(configuration, targetClassLoader);
 
-        printModuleLayer(moduleLayer);
+        //printModuleLayer(moduleLayer);
 
         return RepoResolverOverlay.of(moduleLayer, uri);
     }
@@ -86,7 +134,7 @@ public class TestMain {
         final var map = Map.ofEntries(
                 Map.entry("com.fasterxml.jackson.core", "com.fasterxml.jackson.core:jackson-core:2.12.3"),
                 Map.entry("com.fasterxml.jackson.databind", "com.fasterxml.jackson.core:jackson-databind:2.12.3"),
-                Map.entry("com.fasterxml.jackson.annotation", "com.fasterxml.jackson.core:jackson-annotation:2.12.3")
+                Map.entry("com.fasterxml.jackson.annotation", "com.fasterxml.jackson.core:jackson-annotations:2.12.3")
         );
 
         final var finder = MavenModuleFinder.of(map);
@@ -94,14 +142,10 @@ public class TestMain {
         final var boot = ModuleLayer.boot();
 
         final var resolve = boot.configuration().resolve(finder, ModuleFinder.of(), List.of("com.fasterxml.jackson.databind"));
-        final var layer = boot.defineModulesWithOneLoader(resolve, getClass().getClassLoader());
-        final var module = layer.findModule("com.fasterxml.jackson.databind").get();
-        System.out.println(module.getPackages());
-        try {
-            module.getClassLoader().loadClass("de.scholzi100.test.Test");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
+        final var controller = ModuleLayer.defineModulesWithOneLoader(resolve, List.of(boot) ,getClass().getClassLoader());
+        controller.layer().modules().forEach(module -> {
+            System.out.println(module.getDescriptor().toNameAndVersion());
+        });
     }
 
 }

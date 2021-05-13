@@ -10,7 +10,7 @@
 		<Logger name="org.apache.http.wire" level="TRACE" additivity="false">
 		</Logger>
 		<Root level="trace">
-			<AppenderRef ref="STDOUT" level="trace"/>
+			<AppenderRef ref="STDOUT" level="info"/>
 		</Root>
 	</Loggers>
 </Configuration>

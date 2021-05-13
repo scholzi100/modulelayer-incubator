@@ -45,6 +45,12 @@
             <version>2.14.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>de.scholzi100.incubator</groupId>
+            <artifactId>module-name-finder</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+
     </dependencies>
 
 </project>

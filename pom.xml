@@ -13,6 +13,7 @@
         <module>plugin</module>
         <module>resolver-provider</module>
         <module>maven-packed</module>
+        <module>module-name-finder</module>
     </modules>
 
     <build>

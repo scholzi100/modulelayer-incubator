@@ -10,6 +10,7 @@ public class Test {
     public static void main(String[] args) {
         final var moduleNameResolver = new ModuleNameResolverImpl();
         final var first = "/home/scholzi100/.m2/repository/org/apache/logging/log4j/log4j-api/2.14.1/log4j-api-2.14.1.jar";
+        final var seconf = "/home/scholzi100/.m2/repository/org/slf4j/slf4j-api/1.7.30/slf4j-api-1.7.30.jar";
         final var moduleDescriptor = moduleNameResolver.getModuleDescriptorByPath(Path.of(first));
         if (moduleDescriptor.isPresent()) {
             final var moduleName = moduleDescriptor.get();

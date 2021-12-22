@@ -20,4 +20,5 @@ when ModuleLayers are loaded.
 
 ## Related foreign project issues
 - [APACHE-MNG-7037 - Add JPMS support -> solve split packages problem](https://issues.apache.org/jira/browse/MNG-7037)
+- [APACHE-MRESOLVER-27 - turn artifacts into Java 9 modules](https://issues.apache.org/jira/browse/MRESOLVER-27)
 - [APACHE-LOG4J2-2463 - ClassNotFoundException when log4j2 is used with slf4j on module path in java 11](https://issues.apache.org/jira/browse/LOG4J2-2463)
